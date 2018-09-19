@@ -42,27 +42,27 @@ implementation{
 
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
-	
+
    bool isPacketValid(pack *Package);
    void CheckandAge_Neighbors();
 
    uint16_t seqCounter = 1;
    uint16_t seq = 0;
-   uint16_t replysequence = 0; 
+   uint16_t replysequence = 0;
 
    event void Boot.booted(){
-	uint32_t start, offset;
+	 uint32_t start, offset;
 
-      call AMControl.start();
+   call AMControl.start();
 
-	start = call Random.rand32() % 2000;
-	offset = 20000 + (call Random.rand32() % 5000);
+	 start = call Random.rand32() % 2000;
+	 offset = 20000 + (call Random.rand32() % 5000);
 
-	call NeighborTimer.startPeriodicAt(start, offset);
-	dbg(GENERAL_CHANNEL, "Boot began with timer starting at %d, firing every %d\n\n\n", start, offset);
+	 call NeighborTimer.startPeriodicAt(start, offset);
+	 dbg(GENERAL_CHANNEL, "Boot began with timer starting at %d, firing every %d\n\n\n", start, offset);
 
 
-      dbg(GENERAL_CHANNEL, "Booted\n");
+   dbg(GENERAL_CHANNEL, "Booted\n");
    }
 
    event void AMControl.startDone(error_t err){
@@ -78,14 +78,15 @@ implementation{
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){									//this function is going to have a lot of different checks
       dbg(GENERAL_CHANNEL, "Packet Received\n");
-      if(len==sizeof(pack)){																//checks to see if the packet has changed 
+
+      if(len==sizeof(pack)){																//checks to see if the packet has changed
 
         pack* myMsg=(pack*) payload;
 	bool isValid;
 	isValid = isPacketValid(myMsg);
 
 	if (isValid == FALSE) {																//checks to see if the packet still needs to be flooded
-		
+
 		dbg(GENERAL_CHANNEL, "Found a recirculating package, no longer flooding the packet \n\n");
 
 	} else if (isValid == TRUE && myMsg->protocol == 0) {												//checks to see if the packet still needs to be flooded
@@ -104,21 +105,21 @@ implementation{
 	} else if (TOS_NODE_ID != myMsg->dest) {
 		uint16_t myProtocol = myMsg->protocol;
 		switch(myProtocol){
-		
+
 		case 0:		//myProtocol == 0, ping						//if package is not at the right destination, then repackage
 			makePack(&sendPackage, TOS_NODE_ID, myMsg->src, myMsg->dest, myMsg->TTL - 1, myMsg->protocol = 0, myMsg->seq, myMsg->payload, sizeof(myMsg->payload));		//not sure if this is right, makes the new package
 			call Sender.send(sendPackage, AM_BROADCAST_ADDR);	//not sure if right					//sends the new package to the next node
 			break;
 
 	//Need to send discovery packet to neighbors, perhaps for neighbor discovery?
-		
+
 		case 1:		//myProtocol = 1, pingreply
 
-	         	dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
-        	 	return msg;
+	    dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
+      return msg;
 			break;
-		
-		
+
+
 		case 2: 	//myProtocol == 2
 			break;
 
@@ -130,13 +131,16 @@ implementation{
 
 		case 5:
 			break;
-      		
+
 		default: 	//don't know protocol
 			dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
 	        	return msg;
 		}
    }
-   
+  }
+   return msg;
+}
+
     bool isPacketValid(pack* Package) {															//function to check if the packet is a recirculating packet
 
 	uint16_t i = 0;
@@ -147,10 +151,10 @@ implementation{
 
 	else if (myMsg->TTL == 0) {												//Check to see if packet should still be living
 
-		dbg(FLOODING_CHANNEL, "TTL of this packet has reached zero"); 
+		dbg(FLOODING_CHANNEL, "TTL of this packet has reached zero");
 		return FALSE;
 
-	} else {														//we need to iterate through the list to see if the packet is a recirculating packet 
+	} else {														//we need to iterate through the list to see if the packet is a recirculating packet
 
 		for (int i = 0; i < list; i++) {
 
@@ -165,7 +169,12 @@ implementation{
 		}
 	return TRUE;
 	}
+  }
 
+void Neighbors() {
+  uint16_t listSize;
+  uint16_t age;
+}
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
