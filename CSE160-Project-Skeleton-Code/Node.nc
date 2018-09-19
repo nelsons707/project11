@@ -28,7 +28,7 @@ module Node{
 
    uses interface Random as Random;
    uses interface List<pack> as PacketList;
-   uses interface List<neighbor *> as NodeNeighborList;
+   uses interface List<neighbor *> as nodesVisited;
    uses interface Pool<neighbor> as NeighborPool;
    uses interface Timer<TMilli> as NeighborTimer;
 
@@ -107,7 +107,7 @@ implementation{
 		switch(myProtocol){
 
 		case 0:		//myProtocol == 0, ping						//if package is not at the right destination, then repackage
-			makePack(&sendPackage, TOS_NODE_ID, myMsg->src, myMsg->dest, myMsg->TTL - 1, myMsg->protocol = 0, myMsg->seq, myMsg->payload, sizeof(myMsg->payload));		//not sure if this is right, makes the new package
+			makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL - 1, myMsg->protocol = 0, myMsg->seq, myMsg->payload, sizeof(myMsg->payload));		//not sure if this is right, makes the new package
 			call Sender.send(sendPackage, AM_BROADCAST_ADDR);	//not sure if right					//sends the new package to the next node
 			break;
 
@@ -141,27 +141,28 @@ implementation{
    return msg;
 }
 
-    bool isPacketValid(pack* Package) {															//function to check if the packet is a recirculating packet
+    bool isPacketValid(pack* myMsg) {															//function to check if the packet is a recirculating packet
 
-	uint16_t i = 0;
-	uint16_t list = call NodesVisited.size();
+	  uint16_t i = 0;
+	  uint16_t list = call nodesVisited.size();
 
-	if (list == 0)														//Check to see if this packet has gone to any other nodes
+	  if (list == 0)														//Check to see if this packet has gone to any other nodes
 		return TRUE;
 
-	else if (myMsg->TTL == 0) {												//Check to see if packet should still be living
+	  else if (myMsg->TTL == 0) {												//Check to see if packet should still be living
 
 		dbg(FLOODING_CHANNEL, "TTL of this packet has reached zero");
 		return FALSE;
+    }
 
-	} else {														//we need to iterate through the list to see if the packet is a recirculating packet
+	  else {														//we need to iterate through the list to see if the packet is a recirculating packet
 
-		for (int i = 0; i < list; i++) {
+		for (i = 0; i < list; i++) {
 
 			pack currentPack;
-			currentPack = call NodesVisited.get(i);
+			currentPack = call nodesVisited.get(i);
 
-			if (currentPack.src == Package.src && currentPack.dest == Package.dest && currentPack.seq == Package.seq) {			//checks to see if this is a recirculating package
+			if (currentPack.src == myMsg.src && currentPack.dest == myMsg.dest && currentPack.seq == myMsg.seq) {			//checks to see if this is a recirculating package
 
 				dbg(FLOODING_CHANNEL, "This packet has already flooded through all the nodes");
 				return FALSE;
@@ -169,7 +170,7 @@ implementation{
 		}
 	return TRUE;
 	}
-  }
+}
 
 void Neighbors() {
   uint16_t listSize;
