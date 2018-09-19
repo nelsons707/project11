@@ -136,6 +136,35 @@ implementation{
 	        	return msg;
 		}
    }
+   
+    bool isPacketValid(pack* Package) {															//function to check if the packet is a recirculating packet
+
+	uint16_t i = 0;
+	uint16_t list = call NodesVisited.size();
+
+	if (list == 0)														//Check to see if this packet has gone to any other nodes
+		return TRUE;
+
+	else if (myMsg->TTL == 0) {												//Check to see if packet should still be living
+
+		dbg(FLOODING_CHANNEL, "TTL of this packet has reached zero"); 
+		return FALSE;
+
+	} else {														//we need to iterate through the list to see if the packet is a recirculating packet 
+
+		for (int i = 0; i < list; i++) {
+
+			pack currentPack;
+			currentPack = call NodesVisited.get(i);
+
+			if (currentPack.src == Package.src && currentPack.dest == Package.dest && currentPack.seq == Package.seq) {			//checks to see if this is a recirculating package
+
+				dbg(FLOODING_CHANNEL, "This packet has already flooded through all the nodes");
+				return FALSE;
+			}
+		}
+	return TRUE;
+	}
 
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
