@@ -27,7 +27,7 @@ module Node{
    uses interface CommandHandler;
 
    uses interface Random as Random;
-   uses interface List<pack> as PacketList;
+   uses interface List<pack> as NodesVisited;
    uses interface List<neighbor *> as NodeNeighborList;
    uses interface Pool<neighbor> as NeighborPool;
    uses interface Timer<TMilli> as NeighborTimer;
@@ -53,13 +53,13 @@ implementation{
    event void Boot.booted(){
 	uint32_t start, offset;
 
-      call AMControl.start();
+      call AMControl.start();																//turns on the radio
 
 	start = call Random.rand32() % 2000;
 	offset = 20000 + (call Random.rand32() % 5000);
 
 	call NeighborTimer.startPeriodicAt(start, offset);
-	dbg(GENERAL_CHANNEL, "Boot began with timer starting at %d, firing every %d\n\n\n", start, offset);
+	dbg(GENERAL_CHANNEL, "Boot began with timer starting at %d, firing every %d\n\n\n", start, offset);						//turns on the radio for each node
 
 
       dbg(GENERAL_CHANNEL, "Booted\n");
@@ -82,7 +82,7 @@ implementation{
 
         pack* myMsg=(pack*) payload;
 	bool isValid;
-	isValid = isPacketValid(myMsg);
+	isValid = isPacketValid(myMsg);															//checks to see if it is a valid packet
 
 	if (isValid == FALSE) {																//checks to see if the packet still needs to be flooded
 		
@@ -90,7 +90,7 @@ implementation{
 
 	} else if (isValid == TRUE && myMsg->protocol == 0) {												//checks to see if the packet still needs to be flooded
 
-		dbg(GENERAL_CHANNEL, "Package Received from Node: %d at Node: %d\n\n", myMsg->src, TOS_NODE_ID);						//writes to the output line where the packet currently is
+		dbg(GENERAL_CHANNEL, "Packet Received from Node: %d at Node: %d\n\n", myMsg->src, TOS_NODE_ID);						//writes to the output line where the packet currently is
 		dbg(FLOODING_CHANNEL, "Flooding Channel Message - Package received at Node %d, is meant for Node %d \n\n", TOS_NODE_ID, myMsg->dest);	//writes to the output line where the packet needs to be
 
 	}
@@ -101,42 +101,53 @@ implementation{
 
 		dbg(GENERAL_CHANNEL, "Package is at correct destination! Package from Node: %d, at destination Node: %d, Package Payload: %s\n\n", myMsg->payload);
 
-	} else if (TOS_NODE_ID != myMsg->dest) {
-		uint16_t myProtocol = myMsg->protocol;
-		switch(myProtocol){
-		
-		case 0:		//myProtocol == 0, ping						//if package is not at the right destination, then repackage
-			makePack(&sendPackage, TOS_NODE_ID, myMsg->src, myMsg->dest, myMsg->TTL - 1, myMsg->protocol = 0, myMsg->seq, myMsg->payload, sizeof(myMsg->payload));		//not sure if this is right, makes the new package
-			call Sender.send(sendPackage, AM_BROADCAST_ADDR);	//not sure if right					//sends the new package to the next node
-			break;
+	} else if (TOS_NODE_ID != myMsg->dest && myMsg->protocol == 0) {										//if package is not at the right destination, then repackage
+
+		makePack(&sendPackage, TOS_NODE_ID, myMsg->src, myMsg->dest, myMsg->TTL - 1, 0, myMsg->seq, myMsg->payload, sizeof(myMsg->payload));		//makes the new package
+//not sure if right	call Sender.send(sendPackage, AM_BROADCAST_ADDR);											//sends the new package to the next node
 
 	//Need to send discovery packet to neighbors, perhaps for neighbor discovery?
+
+	} else if (myMsg->protocol = 1)
+
+//left off right here
 		
-		case 1:		//myProtocol = 1, pingreply
-
-	         	dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
-        	 	return msg;
-			break;
-		
-		
-		case 2: 	//myProtocol == 2
-			break;
-
-		case 3:
-			break;
-
-		case 4:
-			break;
-
-		case 5:
-			break;
-      		
-		default: 	//don't know protocol
-			dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
-	        	return msg;
-		}
+         dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
+         return msg;
+      }
+      dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
+      return msg;
    }
 
+   bool isPacketValid(pack* Package) {															//function to check if the packet is a recirculating packet
+
+	uint16_t i = 0;
+	uint16_t list = call NodesVisited.size();
+
+	if (list == 0)														//Check to see if this packet has gone to any other nodes
+		return TRUE;
+
+	else if (myMsg->TTL == 0) {												//Check to see if packet should still be living
+
+		dbg(FLOODING_CHANNEL, "TTL of this packet has reached zero"); 
+		return FALSE;
+
+	} else {														//we need to iterate through the list to see if the packet is a recirculating packet 
+
+		for (int i = 0; i < list; i++) {
+
+			pack currentPack;
+			currentPack = call NodesVisited.get(i);
+
+			if (currentPack.src == Package.src && currentPack.dest == Package.dest && currentPack.seq == Package.seq) {			//checks to see if this is a recirculating package
+
+				dbg(FLOODING_CHANNEL, "This packet has already flooded through all the nodes");
+				return FALSE;
+			}
+		}
+	return TRUE;
+	}
+	
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
