@@ -101,40 +101,22 @@ implementation{
 
 		dbg(GENERAL_CHANNEL, "Package is at correct destination! Package from Node: %d, at destination Node: %d, Package Payload: %s\n\n", myMsg->payload);
 
-	} else if (TOS_NODE_ID != myMsg->dest) {
-		uint16_t myProtocol = myMsg->protocol;
-		switch(myProtocol){
-		
-		case 0:		//myProtocol == 0, ping						//if package is not at the right destination, then repackage
-			makePack(&sendPackage, TOS_NODE_ID, myMsg->src, myMsg->dest, myMsg->TTL - 1, myMsg->protocol = 0, myMsg->seq, myMsg->payload, sizeof(myMsg->payload));		//not sure if this is right, makes the new package
-			call Sender.send(sendPackage, AM_BROADCAST_ADDR);	//not sure if right					//sends the new package to the next node
-			break;
+	} else if (TOS_NODE_ID != myMsg->dest && myMsg->protocol == 0) {										//if package is not at the right destination, then repackage
+
+		makePack(&sendPackage, TOS_NODE_ID, myMsg->src, myMsg->dest, myMsg->TTL - 1, myMsg->protocol = 0, myMsg->seq, myMsg->payload, sizeof(myMsg->payload));		//not sure if this is right, makes the new package
+//not sure if right	call Sender.send(sendPackage, AM_BROADCAST_ADDR);											//sends the new package to the next node
 
 	//Need to send discovery packet to neighbors, perhaps for neighbor discovery?
+
+	} else if (myMsg->protocol = 1)
+
+//left off right here
 		
-		case 1:		//myProtocol = 1, pingreply
-
-	         	dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
-        	 	return msg;
-			break;
-		
-		
-		case 2: 	//myProtocol == 2
-			break;
-
-		case 3:
-			break;
-
-		case 4:
-			break;
-
-		case 5:
-			break;
-      		
-		default: 	//don't know protocol
-			dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
-	        	return msg;
-		}
+         dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
+         return msg;
+      }
+      dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
+      return msg;
    }
 
 
