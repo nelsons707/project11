@@ -106,7 +106,7 @@ implementation{
 
 	     if (TOS_NODE_ID == myMsg->dest) {														//checks to see if the package is at the destination
 
-		     dbg(GENERAL_CHANNEL, "Package is at correct destination! Package from Node: %d, at destination Node: %d, Package Payload: %s\n\n", myMsg->payload);
+		     dbg(GENERAL_CHANNEL, "Package is at correct destination! Package from Node: %d, at destination Node: %d, Package Payload: %s\n\n", myMsg->src, myMsg->dest, myMsg->payload);
 
 	     } else if (TOS_NODE_ID != myMsg->dest) {
 		     uint16_t myProtocol = myMsg->protocol;
@@ -136,16 +136,16 @@ implementation{
 
              //check to see if list has been initialized
              if (neighborSize == 0) { //if it has not, initialize
-                currentNeighbor = call NeighborPool.get();
+                Neighbor = call NeighborPool.get();
 
-                currentNeighbor -> Node = myMsg -> src; //source of packet is neighbor address
-                currentNeighbor -> Age = 0; //
+                Neighbor -> Node = myMsg -> src; //source of packet is neighbor address
+                Neighbor -> Age = 0; //
 
                 neighborDiscovered = TRUE;
 
-                call ListOfNeighbors.pushback(currentNeighbor);
+                call ListOfNeighbors.pushback(Neighbor);
 
-                //put dbg message here
+                dbg(NEIGHBOR_CHANNEL, "Found a new neighbor: %d\n\n", Neighbor->Node);
              }
 
              else {
@@ -153,11 +153,12 @@ implementation{
 
 
                 for (i = 0; i < neighborSize; i++) {
-                  currentNeighbor = call NodeNeighborList.get(i);
+                  currentNeighbor = call ListOfNeighbors.get(i);
 
                     if (myMsg->dest == currentNeighbor->Node) {
                       currentNeighbor->Age = 0;
                       neighborDiscovered = FALSE;
+                      dbg(NEIGHBOR_CHANNEL, "We have rediscovered a Neighbor Node: %d\n\n", currentNeighbor->Node);
                       break;
                     }
                 }
@@ -176,7 +177,7 @@ implementation{
                 }*/
 
                 if (neighborDiscovered == TRUE) {
-                  call ListOFNeighbors.pushback(currentNeighbor);
+                  call ListOfNeighbors.pushback(currentNeighbor);
                 }
              }
 			       break;
