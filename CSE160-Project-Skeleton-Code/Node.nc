@@ -25,7 +25,6 @@ module Node{
    uses interface Receive;
    uses interface SimpleSend as Sender;
    uses interface CommandHandler;
-
    uses interface Random as Random;
    uses interface List<pack> as nodesVisited;
    uses interface List<neighbor *> as ListOfNeighbors;
@@ -33,7 +32,6 @@ module Node{
    uses interface Timer<TMilli> as NeighborTimer;
 
 }
-
 
 implementation{
 
@@ -83,7 +81,6 @@ implementation{
    event void NeighborTimer.fired() {}
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){									//this function is going to have a lot of different checks
-      //dbg(GENERAL_CHANNEL, "Packet Received\n");
 
       if(len==sizeof(pack)){																//checks to see if the packet has changed
 
@@ -92,7 +89,6 @@ implementation{
 	      isValid = isPacketValid(myMsg);
 
 	      if (isValid == FALSE) {																//checks to see if the packet still needs to be flooded
-		      //dbg(GENERAL_CHANNEL, "Found a recirculating package, no longer flooding the packet \n\n");
 
 	      } else if (isValid == TRUE && myMsg->protocol == 0) {												//checks to see if the packet still needs to be flooded
 
@@ -101,8 +97,7 @@ implementation{
 
 	      }
 
-	//Write something to add the Packet to the Packet History List
-       call nodesVisited.pushback(*myMsg);
+       call nodesVisited.pushback(*myMsg);                                                                          //adds the node into the nodes Visted list
 
 	     if (TOS_NODE_ID == myMsg->dest) {														//checks to see if the package is at the destination
 
@@ -127,7 +122,6 @@ implementation{
               //dbg(NEIGHBOR_CHANNEL,"Neighbor Channel Message - Discovered Node: %d, sending discovery packet.\n\n",myMsg->src);
 			        break;
 
-	//Need to send discovery packet to neighbors, perhaps for neighbor discovery?
 
 		      case 1:		//myProtocol = 1, pingreply
 
@@ -162,6 +156,7 @@ implementation{
                       break;
                     }
                 }
+
                 /*
                 while (neighborDiscovered == TRUE) {
 
@@ -215,7 +210,6 @@ implementation{
 
 	  else if (myMsg->TTL == 0) {												//Check to see if packet should still be living
 
-		//dbg(FLOODING_CHANNEL, "TTL of this packet has reached zero/n/n");
 		return FALSE;
     }
 
@@ -227,8 +221,6 @@ implementation{
 			currentPack = call nodesVisited.get(i);
 
 			if (currentPack.src == myMsg->src && currentPack.dest == myMsg->dest && currentPack.seq == myMsg->seq) {			//checks to see if this is a recirculating package
-
-				//dbg(FLOODING_CHANNEL, "This packet has already flooded through all the nodes");
 				return FALSE;
 			}
 		}
