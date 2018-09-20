@@ -32,12 +32,12 @@ implementation {
     Node.CommandHandler -> CommandHandlerC;
 
     Node.NeighborTimer -> NeighborTimerC;
-
+    //list of nodes previously visited
     components new ListC(pack, 20) as nodesVisitedC;
     Node.nodesVisited -> nodesVisitedC;
 
-    components new ListC(neighbor*, 20) as NodeNeighborListC;
-    Node.NodeNeighborList -> NodeNeighborListC;
+    components new ListC(neighbor*, 20) as listOfNeighborsC;
+    Node.ListOfNeighborsC -> ListOfNeighbors;
 
     components new PoolC(neighbor, 64) as NeighborPoolC;
     Node.NeighborPool -> NeighborPoolC;
