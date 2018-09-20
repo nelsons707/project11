@@ -112,7 +112,7 @@ implementation{
          uint16_t i = 0;
          uint16_t neighborSize;
          bool neighborDiscovered = TRUE;
-         
+
          switch(myProtocol){
 
 		       case 0:		//myProtocol == 0, ping						//if package is not at the right destination, then repackage
@@ -122,8 +122,8 @@ implementation{
               //send discovery packet by flipping source and destination. add static number to sequence.
 
               makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 0, 1, seq + 100, myMsg->payload, sizeof(myMsg->payload));
-              call Sender.send(discoveryPackage);
-              dbg(NEIGHBOR_CHANNEL,",Discovered Node, sending discovery packet.\n\n",myMsg->src);
+              call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+              dbg(NEIGHBOR_CHANNEL,"Neighbor Channel Message - Discovered Node, sending discovery packet.\n\n",myMsg->src);
 			        break;
 
 	//Need to send discovery packet to neighbors, perhaps for neighbor discovery?
