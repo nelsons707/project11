@@ -53,6 +53,7 @@ implementation{
    uint16_t replySeq = 0;
    uint32_t start, offset;
    neighbor *currentNeighbor;
+   neighbor *Neighbor;
    event void Boot.booted(){
 
 
@@ -130,7 +131,7 @@ implementation{
 
 		      case 1:		//myProtocol = 1, pingreply
 
-             neighborSize = call ListOfNeighbors.get(); //size of amount of neighbors
+             neighborSize = call ListOfNeighbors.size(); //size of amount of neighbors
 
 
              //check to see if list has been initialized
@@ -140,7 +141,7 @@ implementation{
                 currentNeighbor -> Node = myMsg -> src; //source of packet is neighbor address
                 currentNeighbor -> Age = 0; //
 
-                neighborDiscovered == TRUE;
+                neighborDiscovered = TRUE;
 
                 call ListOfNeighbors.pushback(currentNeighbor);
 
@@ -149,6 +150,18 @@ implementation{
 
              else {
 
+
+
+                for (i = 0; i < neighborSize; i++) {
+                  currentNeighbor = call NodeNeighborList.get(i);
+
+                    if (myMsg->dest == currentNeighbor->Node) {
+                      currentNeighbor->Age = 0;
+                      neighborDiscovered = FALSE;
+                      break;
+                    }
+                }
+                /*
                 while (neighborDiscovered == TRUE) {
 
                   currentNeighbor = call ListOfNeighbors.get(i);
@@ -160,10 +173,10 @@ implementation{
                     //dbg msg
                   }
                   i++;
-                }
+                }*/
 
                 if (neighborDiscovered == TRUE) {
-                  call nodesVisited.pushback(currentNeighbor);
+                  call ListOFNeighbors.pushback(currentNeighbor);
                 }
              }
 			       break;
