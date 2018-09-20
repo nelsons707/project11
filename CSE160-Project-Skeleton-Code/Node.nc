@@ -162,7 +162,7 @@ implementation{
 			pack currentPack;
 			currentPack = call nodesVisited.get(i);
 
-			if (currentPack.src == myMsg.src && currentPack.dest == myMsg.dest && currentPack.seq == myMsg.seq) {			//checks to see if this is a recirculating package
+			if (currentPack.src == myMsg->src && currentPack.dest == myMsg->dest && currentPack.seq == myMsg->seq) {			//checks to see if this is a recirculating package
 
 				dbg(FLOODING_CHANNEL, "This packet has already flooded through all the nodes");
 				return FALSE;
