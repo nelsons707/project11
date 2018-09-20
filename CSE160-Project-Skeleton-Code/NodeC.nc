@@ -33,10 +33,10 @@ implementation {
 
     Node.NeighborTimer -> NeighborTimerC;
 
-    components new ListC(pack, 20) as PacketHistoryListC;
-    Node.PacketHistoryList -> PacketHistoryListC;
+    components new ListC(pack, 20) as nodesVisitedC;
+    Node.nodesVisited -> nodesVisitedC;
 
-    components new ListC((neighbor*, 20) as NodeNeighborListC;
+    components new ListC(neighbor*, 20) as NodeNeighborListC;
     Node.NodeNeighborList -> NodeNeighborListC;
 
     components new PoolC(neighbor, 64) as NeighborPoolC;
