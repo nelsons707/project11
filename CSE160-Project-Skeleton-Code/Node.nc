@@ -87,7 +87,7 @@ implementation{
 
 	if (isValid == FALSE) {																//checks to see if the packet still needs to be flooded
 
-		dbg(GENERAL_CHANNEL, "Found a recirculating package, no longer flooding the packet \n\n");
+		//dbg(GENERAL_CHANNEL, "Found a recirculating package, no longer flooding the packet \n\n");
 
 	} else if (isValid == TRUE && myMsg->protocol == 0) {												//checks to see if the packet still needs to be flooded
 
@@ -97,6 +97,7 @@ implementation{
 	}
 
 	//Write something to add the Packet to the Packet History List
+  call nodesVisited.pushback(*myMsg);
 
 	if (TOS_NODE_ID == myMsg->dest) {														//checks to see if the package is at the destination
 
@@ -134,6 +135,7 @@ implementation{
 
 		default: 	//don't know protocol
 			dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
+      call Sender.send(sendPackage, AM_BROADCAST_ADDR);
 	        	return msg;
 		}
    }
@@ -179,8 +181,8 @@ void Neighbors() {
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
-      makePack(&sendPackage, TOS_NODE_ID, destination, 0, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
-      call Sender.send(sendPackage, destination);
+      makePack(&sendPackage, TOS_NODE_ID, destination, 15, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
+      call Sender.send(sendPackage, AM_BROADCAST_ADDR);
    }
 
    event void CommandHandler.printNeighbors(){}
