@@ -27,8 +27,8 @@ module Node{
    uses interface CommandHandler;
 
    uses interface Random as Random;
-   uses interface List<pack> as PacketList;
-   uses interface List<neighbor *> as nodesVisited;
+   uses interface List<pack> as nodesVisited;
+   uses interface List<neighbor *> as ListOfNeighbors;
    uses interface Pool<neighbor> as NeighborPool;
    uses interface Timer<TMilli> as NeighborTimer;
 
@@ -109,7 +109,10 @@ implementation{
 
 	     } else if (TOS_NODE_ID != myMsg->dest) {
 		     uint16_t myProtocol = myMsg->protocol;
-
+         uint16_t i = 0;
+         uint16_t neighborSize;
+         bool neighborDiscovered = TRUE;
+         
          switch(myProtocol){
 
 		       case 0:		//myProtocol == 0, ping						//if package is not at the right destination, then repackage
@@ -118,17 +121,17 @@ implementation{
 
               //send discovery packet by flipping source and destination. add static number to sequence.
 
-              makePack(&discoveryPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 0, 1, sequence + 100, myMsg->payload, sizeof(myMsg->payload));
+              makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 0, 1, seq + 100, myMsg->payload, sizeof(myMsg->payload));
               call Sender.send(discoveryPackage);
-              dbg(NEIGHBOR_CHANNEL,",Discovered Node, sending discovery packet.\n\n",myMsg-src);
+              dbg(NEIGHBOR_CHANNEL,",Discovered Node, sending discovery packet.\n\n",myMsg->src);
 			        break;
 
 	//Need to send discovery packet to neighbors, perhaps for neighbor discovery?
 
 		      case 1:		//myProtocol = 1, pingreply
-             uint16_t i = 0;
-             uint16_t neighborSize = call ListOfNeighbors.get(); //size of amount of neighbors
-             bool neighborDiscovered = TRUE;
+
+             neighborSize = call ListOfNeighbors.get(); //size of amount of neighbors
+
 
              //check to see if list has been initialized
              if (neighborSize == 0) { //if it has not, initialize
