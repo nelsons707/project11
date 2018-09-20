@@ -83,7 +83,7 @@ implementation{
    event void NeighborTimer.fired() {}
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){									//this function is going to have a lot of different checks
-      dbg(GENERAL_CHANNEL, "Packet Received\n");
+      //dbg(GENERAL_CHANNEL, "Packet Received\n");
 
       if(len==sizeof(pack)){																//checks to see if the packet has changed
 
@@ -124,7 +124,7 @@ implementation{
 
               makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 0, 1, seq + 100, myMsg->payload, sizeof(myMsg->payload));
               call Sender.send(sendPackage, AM_BROADCAST_ADDR);
-              dbg(NEIGHBOR_CHANNEL,"Neighbor Channel Message - Discovered Node, sending discovery packet.\n\n",myMsg->src);
+              dbg(NEIGHBOR_CHANNEL,"Neighbor Channel Message - Discovered Node: %d, sending discovery packet.\n\n",myMsg->src);
 			        break;
 
 	//Need to send discovery packet to neighbors, perhaps for neighbor discovery?
