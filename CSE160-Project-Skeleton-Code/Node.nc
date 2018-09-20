@@ -236,10 +236,41 @@ implementation{
 	}
 }
 
-void Neighbors() {
+/*void Neighbors() {
   uint16_t listSize;
   uint16_t age;
-}
+}*/
+
+void neighborCheck() {
+
+		uint16_t listSize;
+		uint16_t i = 0;
+		uint16_t currentAge;
+		size = call ListOfNeighbors.size();
+
+		if (size != 0) {
+
+			for(i = 0; i < size; i++) {
+
+				currentNeighbor = call ListOfNeighbors.get(i);	//currentNeighbor is something else
+				currentAge = currentNeighbor->Age;
+				currentAge++;
+				currentNeighbor->Age = currentAge;
+			}
+
+			for(i = 0; i < size; i++) {
+
+				currentNeighbor = call ListOfNeighbors.get(i);
+				currentAge = currentNeighbor->Age;
+
+				if (currentAge > 5) {				//checks to see if it's old neighbor
+
+					call ListOfNeighbors.popback();
+					dbg(NEIGHBOR_CHANNEL, "Removed a dead neighbor");
+
+				}
+			}
+		} 
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
