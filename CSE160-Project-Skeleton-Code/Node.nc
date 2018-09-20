@@ -13,10 +13,10 @@
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
 
-typedef nx_struct neighbor {
+typedef nx_struct currentNeighbors {
 	nx_uint16_t Node;
-	nx_uint8_t Age;
-}neighbor;
+	nx_uint16_t Age;
+} currentNeighbors;
 
 
 module Node{
@@ -40,18 +40,21 @@ implementation{
    pack sendPackage;
    pack replyPackage;
 
-   // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
    bool isPacketValid(pack *Package);
+
+
+
    void CheckandAge_Neighbors();
 
    uint16_t seqCounter = 1;
    uint16_t seq = 0;
-   uint16_t replysequence = 0;
-
+   uint16_t replySeq = 0;
+   uint32_t start, offset;
+   currentNeighbors *currentNeighbor;
    event void Boot.booted(){
-	 uint32_t start, offset;
+
 
    call AMControl.start();
 
@@ -59,7 +62,7 @@ implementation{
 	 offset = 20000 + (call Random.rand32() % 5000);
 
 	 call NeighborTimer.startPeriodicAt(start, offset);
-	 dbg(GENERAL_CHANNEL, "Boot began with timer starting at %d, firing every %d\n\n\n", start, offset);
+	 dbg(GENERAL_CHANNEL, "Boot began with   starting at %d, firing every %d\n\n\n", start, offset);
 
 
    dbg(GENERAL_CHANNEL, "Booted\n");
@@ -76,69 +79,111 @@ implementation{
 
    event void AMControl.stopDone(error_t err){}
 
+   event void NeighborTimer.fired() {}
+
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){									//this function is going to have a lot of different checks
       dbg(GENERAL_CHANNEL, "Packet Received\n");
 
       if(len==sizeof(pack)){																//checks to see if the packet has changed
 
         pack* myMsg=(pack*) payload;
-	bool isValid;
-	isValid = isPacketValid(myMsg);
+	      bool isValid;
+	      isValid = isPacketValid(myMsg);
 
-	if (isValid == FALSE) {																//checks to see if the packet still needs to be flooded
+	      if (isValid == FALSE) {																//checks to see if the packet still needs to be flooded
+		      //dbg(GENERAL_CHANNEL, "Found a recirculating package, no longer flooding the packet \n\n");
 
-		//dbg(GENERAL_CHANNEL, "Found a recirculating package, no longer flooding the packet \n\n");
+	      } else if (isValid == TRUE && myMsg->protocol == 0) {												//checks to see if the packet still needs to be flooded
 
-	} else if (isValid == TRUE && myMsg->protocol == 0) {												//checks to see if the packet still needs to be flooded
+		    dbg(GENERAL_CHANNEL, "Package Received from Node: %d at Node: %d\n\n", myMsg->src, TOS_NODE_ID);						//writes to the output line where the packet currently is
+		    dbg(FLOODING_CHANNEL, "Flooding Channel Message - Package received at Node %d, is meant for Node %d \n\n", TOS_NODE_ID, myMsg->dest);	//writes to the output line where the packet needs to be
 
-		dbg(GENERAL_CHANNEL, "Package Received from Node: %d at Node: %d\n\n", myMsg->src, TOS_NODE_ID);						//writes to the output line where the packet currently is
-		dbg(FLOODING_CHANNEL, "Flooding Channel Message - Package received at Node %d, is meant for Node %d \n\n", TOS_NODE_ID, myMsg->dest);	//writes to the output line where the packet needs to be
-
-	}
+	      }
 
 	//Write something to add the Packet to the Packet History List
-  call nodesVisited.pushback(*myMsg);
+       call nodesVisited.pushback(*myMsg);
 
-	if (TOS_NODE_ID == myMsg->dest) {														//checks to see if the package is at the destination
+	     if (TOS_NODE_ID == myMsg->dest) {														//checks to see if the package is at the destination
 
-		dbg(GENERAL_CHANNEL, "Package is at correct destination! Package from Node: %d, at destination Node: %d, Package Payload: %s\n\n", myMsg->payload);
+		     dbg(GENERAL_CHANNEL, "Package is at correct destination! Package from Node: %d, at destination Node: %d, Package Payload: %s\n\n", myMsg->payload);
 
-	} else if (TOS_NODE_ID != myMsg->dest) {
-		uint16_t myProtocol = myMsg->protocol;
-		switch(myProtocol){
+	     } else if (TOS_NODE_ID != myMsg->dest) {
+		     uint16_t myProtocol = myMsg->protocol;
 
-		case 0:		//myProtocol == 0, ping						//if package is not at the right destination, then repackage
-			makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL - 1, myMsg->protocol = 0, myMsg->seq, myMsg->payload, sizeof(myMsg->payload));		//not sure if this is right, makes the new package
-			call Sender.send(sendPackage, AM_BROADCAST_ADDR);	//not sure if right					//sends the new package to the next node
-			break;
+         switch(myProtocol){
+
+		       case 0:		//myProtocol == 0, ping						//if package is not at the right destination, then repackage
+			        makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL - 1, myMsg->protocol = 0, myMsg->seq, myMsg->payload, sizeof(myMsg->payload));		//not sure if this is right, makes the new package
+			        call Sender.send(sendPackage, AM_BROADCAST_ADDR);	//not sure if right					//sends the new package to the next node
+
+              //send discovery packet by flipping source and destination. add static number to sequence.
+
+              makePack(&discoveryPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 0, 1, sequence + 100, myMsg->payload, sizeof(myMsg->payload));
+              call Sender.send(discoveryPackage);
+              dbg(NEIGHBOR_CHANNEL,",Discovered Node, sending discovery packet.\n\n",myMsg-src);
+			        break;
 
 	//Need to send discovery packet to neighbors, perhaps for neighbor discovery?
 
-		case 1:		//myProtocol = 1, pingreply
+		      case 1:		//myProtocol = 1, pingreply
+             uint16_t i = 0;
+             uint16_t neighborSize = call ListOfNeighbors.get(); //size of amount of neighbors
+             bool neighborDiscovered = TRUE;
 
-	    dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
-      return msg;
-			break;
+             //check to see if list has been initialized
+             if (neighborSize == 0) { //if it has not, initialize
+                currentNeighbor = call NeighborPool.get();
+
+                currentNeighbor -> Node = myMsg -> src; //source of packet is neighbor address
+                currentNeighbor -> Age = 0; //
+
+                neighborDiscovered == TRUE;
+
+                call ListOfNeighbors.pushback(currentNeighbor);
+
+                //put dbg message here
+             }
+
+             else {
+
+                while (neighborDiscovered == TRUE) {
+
+                  currentNeighbor = call ListOfNeighbors.get(i);
+
+                  if (myMsg -> dest == currentNeighbor -> Node) {
+                    neighborDiscovered == FALSE;
+                    currentNeighbor -> Age = 0;
+
+                    //dbg msg
+                  }
+                  i++;
+                }
+
+                if (neighborDiscovered == TRUE) {
+                  call nodesVisited.pushback(currentNeighbor);
+                }
+             }
+			       break;
 
 
-		case 2: 	//myProtocol == 2
-			break;
+		      case 2: 	//myProtocol == 2, used later
+			       break;
 
-		case 3:
-			break;
+		      case 3:
+			       break;
 
-		case 4:
-			break;
+		      case 4:
+			       break;
 
-		case 5:
-			break;
+		      case 5:
+			       break;
 
-		default: 	//don't know protocol
-			dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
-      call Sender.send(sendPackage, AM_BROADCAST_ADDR);
-	        	return msg;
-		}
-   }
+      		default: 	//don't know protocol
+			       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
+             call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+	        	 return msg;
+		     }
+      }
   }
    return msg;
 }
@@ -166,7 +211,7 @@ implementation{
 
 			if (currentPack.src == myMsg->src && currentPack.dest == myMsg->dest && currentPack.seq == myMsg->seq) {			//checks to see if this is a recirculating package
 
-				dbg(FLOODING_CHANNEL, "This packet has already flooded through all the nodes");
+				//dbg(FLOODING_CHANNEL, "This packet has already flooded through all the nodes");
 				return FALSE;
 			}
 		}
