@@ -36,8 +36,8 @@ implementation {
     components new ListC(pack, 20) as nodesVisitedC;
     Node.nodesVisited -> nodesVisitedC;
 
-    components new ListC(neighbor*, 20) as listOfNeighborsC;
-    Node.ListOfNeighborsC -> ListOfNeighbors;
+    components new ListC(neighbor*, 20) as ListOfNeighborsC;
+    Node.ListOfNeighborsC -> ListOfNeighborsC;
 
     components new PoolC(neighbor, 64) as NeighborPoolC;
     Node.NeighborPool -> NeighborPoolC;
