@@ -100,6 +100,8 @@ implementation{
 
 	//Write something to add the Packet to the Packet History List
 
+  call nodesVisited.pushback(*myMsg);
+
 	if (TOS_NODE_ID == myMsg->dest) {														//checks to see if the package is at the destination
 
 		dbg(GENERAL_CHANNEL, "Package is at correct destination! Package from Node: %d, at destination Node: %d, Package Payload: %s\n\n", myMsg->payload);
