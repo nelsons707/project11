@@ -215,7 +215,7 @@ implementation{
 
 	  else if (myMsg->TTL == 0) {												//Check to see if packet should still be living
 
-		dbg(FLOODING_CHANNEL, "TTL of this packet has reached zero");
+		//dbg(FLOODING_CHANNEL, "TTL of this packet has reached zero/n/n");
 		return FALSE;
     }
 
