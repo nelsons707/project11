@@ -13,10 +13,10 @@
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
 
-typedef nx_struct currentNeighbors {
+typedef nx_struct neighbors {
 	nx_uint16_t Node;
 	nx_uint16_t Age;
-} currentNeighbors;
+} neighbors;
 
 
 module Node{
@@ -52,7 +52,7 @@ implementation{
    uint16_t seq = 0;
    uint16_t replySeq = 0;
    uint32_t start, offset;
-   currentNeighbors *currentNeighbor;
+   neighbors *currentNeighbor;
    event void Boot.booted(){
 
 
