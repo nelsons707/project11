@@ -27,8 +27,8 @@ module Node{
    uses interface CommandHandler;
 
    uses interface Random as Random;
-   uses interface List<pack> as PacketList;
-   uses interface List<neighbor *> as nodesVisited;
+   uses interface List<pack> as nodesVisited;
+   uses interface List<neighbor *> as NodeNeighborList;
    uses interface Pool<neighbor> as NeighborPool;
    uses interface Timer<TMilli> as NeighborTimer;
 
@@ -75,6 +75,8 @@ implementation{
    }
 
    event void AMControl.stopDone(error_t err){}
+
+  // event void NeighborTimer.fired() {}
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){									//this function is going to have a lot of different checks
       dbg(GENERAL_CHANNEL, "Packet Received\n");
