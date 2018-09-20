@@ -36,10 +36,10 @@ implementation {
     components new ListC(pack, 20) as nodesVisitedC;
     Node.nodesVisited -> nodesVisitedC;
 
-    components new ListC(currentNeighbor*, 20) as ListOfNeighborsC;
+    components new ListC(neighbor*, 20) as ListOfNeighborsC;
     Node.ListOfNeighborsC -> ListOfNeighborsC;
 
-    components new PoolC(currentNeighbor, 64) as NeighborPoolC;
+    components new PoolC(neighbor, 64) as NeighborPoolC;
     Node.NeighborPool -> NeighborPoolC;
 
     components RandomC as Random;
