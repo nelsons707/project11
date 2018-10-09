@@ -44,7 +44,7 @@ implementation{
 
 
 
-   void CheckandAge_Neighbors();
+   void neighborCheck();
 
    uint16_t seqCounter = 1;
    uint16_t seq = 0;
@@ -78,192 +78,98 @@ implementation{
 
    event void AMControl.stopDone(error_t err){}
 
-   event void NeighborTimer.fired() {}
+   void neighborCheck() {
+
+     makePack(&sendPackage, TOS_NODE_ID, TOS_NODE_ID, 1, 0, seq++, "HI NEIGHBOR", PACKET_MAX_PAYLOAD_SIZE);
+     call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+     uint16_t list = call nodesVisited.size()
+     for(i = 0; i < list;i++){
+         dbg(NEIGHBOR_CHANNEL,"i am printing\n");
+         //uint16_t Neighbor = call nodesVisited.get(i);
+         //printf('%s', Neighbor);
+         //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
+
+         }
+   }
+
+   event void NeighborTimer.fired() {
+   dbg(GENERAL_CHANNEL, "HELLO");
+      neighborCheck();
+   }
+
+   bool isPacketValid(uint16_t from, pack* myMsg) {															//function to check if the packet is a recirculating packet
+
+   uint16_t i = 0;
+   uint16_t list = call nodesVisited.size();
+
+   if (list == 0)														//Check to see if this packet has gone to any other nodes
+   return TRUE;
+
+   else {														//we need to iterate through the list to see if the packet is a recirculating packet
+
+   for (i = 0; i < list; i++) {
+
+     pack currentPack;
+     currentPack = call nodesVisited.get(i);
+
+     if (currentPack.src == myMsg->src && currentPack.seq == myMsg->seq) {			//checks to see if this is a recirculating package
+       return TRUE;
+     }
+   }
+ return FALSE;
+ }
+}
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){									//this function is going to have a lot of different checks
 
-      if(len==sizeof(pack)){																//checks to see if the packet has changed
 
-        pack* myMsg=(pack*) payload;
-	      bool isValid;
-	      isValid = isPacketValid(myMsg);
+           if(len==sizeof(pack)){
+               pack* myMsg=(pack*) payload;
+               // dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
+               if (myMsg -> TTL == 0){
+                   //dbg(FLOODING_CHANNEL, "Packet Dropped due to TTL at 0\n");
+                   return msg;
+               }
+               else if (myMsg -> dest != TOS_NODE_ID){
+                   if (isPacketValid(myMsg -> src, *myMsg) == TRUE)
+                       return msg;
+                   else if (myMsg -> src == myMsg -> dest){
+                       int has = 0, i = 0;
+                       for (i = 0; i < call ListOfNeighbors.size(); i++){
+                           int temp = call ListOfNeighbors.get(i);
+                           if (temp == myMsg -> src)
+                               has++;
+                       }
+                       if (has == 0)
+                           call ListOfNeighbors.pushback(myMsg -> src);
 
-	      if (isValid == FALSE) {																//checks to see if the packet still needs to be flooded
+                   }
+                   call nodesVisited.pushback(*myMsg);
 
-	      } else if (isValid == TRUE && myMsg->protocol == 0) {												//checks to see if the packet still needs to be flooded
+                   myMsg -> TTL -= 1;
+                   dbg(FLOODING_CHANNEL, "Packet Received from %d, flooding\n", myMsg->src);
 
-		    dbg(GENERAL_CHANNEL, "Package Received from Node: %d at Node: %d\n\n", myMsg->src, TOS_NODE_ID);						//writes to the output line where the packet currently is
-		    dbg(FLOODING_CHANNEL, "Flooding Channel Message - Package received at Node %d, is meant for Node %d \n\n", TOS_NODE_ID, myMsg->dest);	//writes to the output line where the packet needs to be
-
-	      }
-
-       call nodesVisited.pushback(*myMsg);                                                                          //adds the node into the nodes Visted list
-
-	     if (TOS_NODE_ID == myMsg->dest) {														//checks to see if the package is at the destination
-
-		     dbg(GENERAL_CHANNEL, "Package is at correct destination! Package from Node: %d, at destination Node: %d, Package Payload: %s\n\n", myMsg->src, myMsg->dest, myMsg->payload);
-
-	     } else if (TOS_NODE_ID != myMsg->dest) {
-		     uint16_t myProtocol = myMsg->protocol;
-         uint16_t i = 0;
-         uint16_t neighborSize;
-         bool neighborDiscovered = TRUE;
-
-         switch(myProtocol){
-
-		       case 0:		//myProtocol == 0, ping						//if package is not at the right destination, then repackage
-			        makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL - 1, myMsg->protocol = 0, myMsg->seq, myMsg->payload, sizeof(myMsg->payload));		//not sure if this is right, makes the new package
-			        call Sender.send(sendPackage, AM_BROADCAST_ADDR);	//not sure if right					//sends the new package to the next node
-
-              //send discovery packet by flipping source and destination. add static number to sequence.
-
-              makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 0, 1, seq + 100, myMsg->payload, sizeof(myMsg->payload));
-              call Sender.send(sendPackage, AM_BROADCAST_ADDR);
-              //dbg(NEIGHBOR_CHANNEL,"Neighbor Channel Message - Discovered Node: %d, sending discovery packet.\n\n",myMsg->src);
-			        break;
+                   call Sender.send(*myMsg, AM_BROADCAST_ADDR);
+               }
 
 
-		      case 1:		//myProtocol = 1, pingreply
-
-             neighborSize = call ListOfNeighbors.size(); //size of amount of neighbors
-
-
-             //check to see if list has been initialized
-             if (neighborSize == 0) { //if it has not, initialize
-                Neighbor = call NeighborPool.get();
-
-                Neighbor -> Node = myMsg -> src; //source of packet is neighbor address
-                Neighbor -> Age = 0; //
-
-                neighborDiscovered = TRUE;
-
-                call ListOfNeighbors.pushback(Neighbor);
-
-                dbg(NEIGHBOR_CHANNEL, "Neighbor Channel Message - Found a new neighbor: %d\n\n", Neighbor->Node);
-             }
-
-             else {
-
-
-
-                for (i = 0; i < neighborSize; i++) {
-                  currentNeighbor = call ListOfNeighbors.get(i);
-
-                    if (myMsg->dest == currentNeighbor->Node) {
-                      currentNeighbor->Age = 0;
-                      neighborDiscovered = FALSE;
-                      dbg(NEIGHBOR_CHANNEL, "We have rediscovered a Neighbor Node: %d\n\n", currentNeighbor->Node);
-                      break;
-                    }
-                }
-
-                /*
-                while (neighborDiscovered == TRUE) {
-
-                  currentNeighbor = call ListOfNeighbors.get(i);
-
-                  if (myMsg -> dest == currentNeighbor -> Node) {
-                    neighborDiscovered == FALSE;
-                    currentNeighbor -> Age = 0;
-
-                    //dbg msg
-                  }
-                  i++;
-                }*/
-
-                if (neighborDiscovered == TRUE) {
-                  call ListOfNeighbors.pushback(currentNeighbor);
-                }
-             }
-			       break;
-
-
-		      case 2: 	//myProtocol == 2, used later
-			       break;
-
-		      case 3:
-			       break;
-
-		      case 4:
-			       break;
-
-		      case 5:
-			       break;
-
-      		default: 	//don't know protocol
-			       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
-             call Sender.send(sendPackage, AM_BROADCAST_ADDR);
-	        	 return msg;
-		     }
-      }
-  }
-   return msg;
+               else if (myMsg -> protocol == 1 && myMsg -> dest == TOS_NODE_ID){
+                   dbg(GENERAL_CHANNEL, "Packet Recieved: %s\n", myMsg -> payload);
+               }
+               else { // myMsg -> dest == TOS_NODE_ID
+                   dbg(GENERAL_CHANNEL, "Packet Recieved: %s\n", myMsg -> payload);
+                   call Packets.pushback(*myMsg);
+                   makePack(&sendPackage, TOS_NODE_ID, myMsg -> src, MAX_TTL, 1, seq++, "Thank You.", PACKET_MAX_PAYLOAD_SIZE);
+                   call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+               }
+               return msg;
+           }
+           dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
+           return msg;
 }
 
-    bool isPacketValid(pack* myMsg) {															//function to check if the packet is a recirculating packet
 
-	  uint16_t i = 0;
-	  uint16_t list = call nodesVisited.size();
 
-	  if (list == 0)														//Check to see if this packet has gone to any other nodes
-		return TRUE;
-
-	  else if (myMsg->TTL == 0) {												//Check to see if packet should still be living
-
-		return FALSE;
-    }
-
-	  else {														//we need to iterate through the list to see if the packet is a recirculating packet
-
-		for (i = 0; i < list; i++) {
-
-			pack currentPack;
-			currentPack = call nodesVisited.get(i);
-
-			if (currentPack.src == myMsg->src && currentPack.dest == myMsg->dest && currentPack.seq == myMsg->seq) {			//checks to see if this is a recirculating package
-				return FALSE;
-			}
-		}
-	return TRUE;
-	}
-}
-
-void Neighbors() {
-  uint16_t listSize;
-  uint16_t age;
-}
-
-void neighborCheck() {
-
-		uint16_t listSize;
-		uint16_t i = 0;
-		uint16_t currentAge;
-		uint16_t size = call ListOfNeighbors.size();
-
-		if (size != 0) {
-
-			for(i = 0; i < size; i++) {
-
-				currentNeighbor = call ListOfNeighbors.get(i);	//currentNeighbor is something else
-				currentAge = currentNeighbor->Age;
-				currentAge++;
-				currentNeighbor->Age = currentAge;
-			}
-
-			for(i = 0; i < size; i++) {
-
-				currentNeighbor = call ListOfNeighbors.get(i);
-				currentAge = currentNeighbor->Age;
-
-				if (currentAge > 5) {				//checks to see if it's old neighbor
-
-					call ListOfNeighbors.popback();
-					dbg(NEIGHBOR_CHANNEL, "Removed a dead neighbor");
-
-				}
-			}
-		}
-}
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
       makePack(&sendPackage, TOS_NODE_ID, destination, 15, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
