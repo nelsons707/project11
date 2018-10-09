@@ -44,7 +44,6 @@ implementation{
 
 
 
-   void neighborCheck();
 
    uint16_t seqCounter = 1;
    uint16_t seq = 0;
@@ -79,10 +78,12 @@ implementation{
    event void AMControl.stopDone(error_t err){}
 
    void neighborCheck() {
+   uint16_t i = 0;
+   uint16_t list = call nodesVisited.size();
 
-     makePack(&sendPackage, TOS_NODE_ID, TOS_NODE_ID, 1, 0, seq++, "HI NEIGHBOR", PACKET_MAX_PAYLOAD_SIZE);
-     call Sender.send(sendPackage, AM_BROADCAST_ADDR);
-     uint16_t list = call nodesVisited.size()
+  makePack(&sendPackage, TOS_NODE_ID, TOS_NODE_ID, 1, 0, seq++, "HI NEIGHBOR", PACKET_MAX_PAYLOAD_SIZE);
+  call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+
      for(i = 0; i < list;i++){
          dbg(NEIGHBOR_CHANNEL,"i am printing\n");
          //uint16_t Neighbor = call nodesVisited.get(i);
@@ -94,7 +95,7 @@ implementation{
 
    event void NeighborTimer.fired() {
    dbg(GENERAL_CHANNEL, "HELLO");
-      neighborCheck();
+    neighborCheck();
    }
 
    bool isPacketValid(uint16_t from, pack* myMsg) {															//function to check if the packet is a recirculating packet
